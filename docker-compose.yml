@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: devtrack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devtrack
+      POSTGRES_PASSWORD: devtrack_password
+      POSTGRES_DB: devtrack
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devtrack -d devtrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devtrack-net
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: devtrack-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://devtrack:devtrack_password@postgres:5432/devtrack"
+      JWT_SECRET: "devtrack_jwt_secret_key_2026"
+      JWT_EXPIRES_IN: "1d"
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - devtrack-net
+
+volumes:
+  postgres_data:
+
+networks:
+  devtrack-net:
+    driver: bridge
